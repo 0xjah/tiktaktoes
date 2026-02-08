@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { 
+            font-family: 'JetBrains Mono', monospace;
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            background: #000000;
+            color: #d8dee9;
+        }
+        .container { 
+            text-align: center;
+            background: #1b1b1b;
+            border: 2px solid #4c566a;
+            padding: 30px 40px;
+            box-shadow: 0 0 0 1px #1b1b1b;
+        }
+        .container::before {
+            content: "┌─ tiktaktoes ─────────────────────┐";
+            display: block;
+            color: #81a1c1;
+            margin-bottom: 15px;
+            text-align: left;
+        }
+        .container::after {
+            content: "└───────────────────────────────────┘";
+            display: block;
+            color: #81a1c1;
+            margin-top: 15px;
+            text-align: left;
+        }
+        h1 { display: none; }
+        .status { 
+            margin: 15px 0; 
+            font-size: 0.95em; 
+            min-height: 25px;
+            color: #a3be8c;
+            padding: 8px;
+            background: #1b1b1b;
+            border-left: 3px solid #a3be8c;
+        }
+        .board {
+            display: grid;
+            grid-template-columns: repeat(3, 70px);
+            gap: 0;
+            margin: 20px auto;
+            border: 2px solid #4c566a;
+            width: fit-content;
+        }
+        .cell {
+            width: 70px;
+            height: 70px;
+            background: #1b1b1b;
+            border: 1px solid #4c566a;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s;
+        }
+        .cell:hover { background: #434c5e; }
+        .cell.x { color: #bf616a; }
+        .cell.o { color: #88c0d0; }
+        .btn {
+            margin-top: 15px;
+            padding: 8px 20px;
+            font-size: 0.85em;
+            font-family: 'JetBrains Mono', monospace;
+            background: #4c566a;
+            color: #eceff4;
+            border: 1px solid #5e81ac;
+            cursor: pointer;
+            margin-right: 8px;
+            transition: all 0.15s;
+        }
+        .btn:hover { 
+            background: #5e81ac; 
+            color: #eceff4;
+        }
+        .game-id { 
+            margin-top: 12px; 
+            font-size: 0.75em; 
+            color: #616e88;
+        }
+        .player-select { 
+            margin: 12px 0;
+            color: #d8dee9;
+        }
+        .player-select span { color: #616e88; }
+        .player-select button {
+            padding: 6px 16px;
+            margin: 0 4px;
+            font-size: 0.9em;
+            font-family: 'JetBrains Mono', monospace;
+            border: 1px solid #4c566a;
+            background: #1b1b1b;
+            color: #d8dee9;
+            cursor: pointer;
+        }
+        .player-select button.active { 
+            background: #5e81ac; 
+            color: #eceff4;
+            border-color: #81a1c1;
+        }
+        .player-select button:hover:not(.active) { background: #434c5e; }
+        .join-section { margin: 12px 0; }
+        .join-section input {
+            padding: 6px 10px;
+            font-size: 0.85em;
+            font-family: 'JetBrains Mono', monospace;
+            border: 1px solid #4c566a;
+            background: #1b1b1b;
+            color: #d8dee9;
+            width: 100px;
+            text-align: center;
+        }
+        .join-section input:focus {
+            outline: none;
+            border-color: #81a1c1;
+        }
+        .join-section input::placeholder { color: #4c566a; }
+        .share-link { 
+            margin-top: 10px; 
+            font-size: 0.7em; 
+            color: #81a1c1;
+            cursor: pointer;
+        }
+        .share-link:hover { color: #88c0d0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tic Tac Toe</h1>
+        <div class="player-select">
+            <span>~/player $</span>
+            <button id="selectX" class="active">X</button>
+            <button id="selectO">O</button>
+        </div>
+        <div class="join-section">
+            <input type="text" id="joinId" placeholder="game_id">
+            <button class="btn" id="joinGame">[join]</button>
+        </div>
+        <div class="status" id="status">&gt; awaiting input...</div>
+        <div class="board" id="board"></div>
+        <button class="btn" id="newGame">[new]</button>
+        <button class="btn" id="resetGame">[reset]</button>
+        <div class="game-id" id="gameId"></div>
+        <div class="share-link" id="shareLink"></div>
+    </div>
+
+    <script>
+        let gameState = null;
+        let ws = null;
+        let myPlayer = 'X';
+        const API = '';
+
+        const board = document.getElementById('board');
+        const status = document.getElementById('status');
+        const gameIdDisplay = document.getElementById('gameId');
+
+        // Initialize board cells
+        for (let i = 0; i < 9; i++) {
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.dataset.index = i;
+            cell.addEventListener('click', () => makeMove(i));
+            board.appendChild(cell);
+        }
+
+        // Player selection
+        document.getElementById('selectX').addEventListener('click', () => {
+            myPlayer = 'X';
+            document.getElementById('selectX').classList.add('active');
+            document.getElementById('selectO').classList.remove('active');
+        });
+        document.getElementById('selectO').addEventListener('click', () => {
+            myPlayer = 'O';
+            document.getElementById('selectO').classList.add('active');
+            document.getElementById('selectX').classList.remove('active');
+        });
+
+        // New game button
+        document.getElementById('newGame').addEventListener('click', async () => {
+            const res = await fetch(`${API}/api/game`, { method: 'POST' });
+            gameState = await res.json();
+            connectWebSocket(gameState.id);
+            updateURL(gameState.id);
+            render();
+        });
+
+        // Join game button
+        document.getElementById('joinGame').addEventListener('click', async () => {
+            const id = document.getElementById('joinId').value.trim();
+            if (!id) return alert('Enter a game ID');
+            await joinGame(id);
+        });
+
+        async function joinGame(id) {
+            const res = await fetch(`${API}/api/game/${id}`);
+            if (!res.ok) return alert('Game not found');
+            gameState = await res.json();
+            connectWebSocket(gameState.id);
+            updateURL(gameState.id);
+            render();
+        }
+
+        function updateURL(gameId) {
+            history.pushState({}, '', `?game=${gameId}`);
+        }
+
+        // Check URL for game ID on load
+        const urlParams = new URLSearchParams(window.location.search);
+        const gameIdFromURL = urlParams.get('game');
+        if (gameIdFromURL) {
+            joinGame(gameIdFromURL);
+        }
+
+        // Reset button
+        document.getElementById('resetGame').addEventListener('click', async () => {
+            if (!gameState) return;
+            const res = await fetch(`${API}/api/game/${gameState.id}`, { method: 'PUT' });
+            gameState = await res.json();
+            render();
+        });
+
+        function connectWebSocket(gameId) {
+            if (ws) ws.close();
+            const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            ws = new WebSocket(`${protocol}//${location.host}/ws/${gameId}`);
+            ws.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (!data.error) {
+                    gameState = data;
+                    render();
+                }
+            };
+        }
+
+        async function makeMove(position) {
+            if (!gameState || gameState.isOver) return;
+            if (gameState.currentTurn !== myPlayer) return;
+            if (gameState.board[position] !== '') return;
+
+            // Send move via WebSocket for real-time
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ position, player: myPlayer }));
+            }
+        }
+
+        function render() {
+            if (!gameState) return;
+
+            const cells = board.querySelectorAll('.cell');
+            cells.forEach((cell, i) => {
+                cell.textContent = gameState.board[i];
+                cell.className = 'cell';
+                if (gameState.board[i] === 'X') cell.classList.add('x');
+                if (gameState.board[i] === 'O') cell.classList.add('o');
+            });
+
+            if (gameState.isOver) {
+                if (gameState.isDraw) {
+                    status.textContent = "> result: draw";
+                } else {
+                    status.textContent = `> winner: ${gameState.winner}`;
+                }
+            } else {
+                status.textContent = gameState.currentTurn === myPlayer 
+                    ? "> your_turn" 
+                    : `> waiting: ${gameState.currentTurn}...`;
+            }
+
+            gameIdDisplay.textContent = `session: ${gameState.id}`;
+            
+            // Show share link
+            const shareLink = document.getElementById('shareLink');
+            const shareURL = `${location.origin}?game=${gameState.id}`;
+            shareLink.textContent = `[click to copy link]`;
+            shareLink.onclick = () => {
+                navigator.clipboard.writeText(shareURL);
+                shareLink.textContent = '[copied!]';
+                setTimeout(() => shareLink.textContent = `[click to copy link]`, 1500);
+            };
+        }
+    </script>
+</body>
+</html>
