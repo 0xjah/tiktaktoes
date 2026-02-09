@@ -22,6 +22,6 @@ func main() {
 	// Apply CORS middleware
 	server := api.CORSMiddleware(mux)
 
-	log.Println("Server starting on :8080")
+	log.Println("Server starting on http://localhost:8080/")
 	log.Fatal(http.ListenAndServe(":8080", server))
 }
