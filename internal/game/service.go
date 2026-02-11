@@ -13,6 +13,9 @@ var (
 	ErrNotYourTurn   = errors.New("not your turn")
 	ErrGameOver      = errors.New("game is over")
 	ErrPositionTaken = errors.New("position already taken")
+	ErrGameFull      = errors.New("game is full, already has two players")
+	ErrSlotTaken     = errors.New("that player slot is already taken")
+	ErrInvalidPlayer = errors.New("invalid player, must be X or O")
 )
 
 // winConditions defines all possible winning combinations
@@ -40,15 +43,61 @@ func NewService() *Service {
 	}
 }
 
-// CreateGame creates a new game and returns its state
-func (s *Service) CreateGame() *models.GameState {
+// CreateGame creates a new game and returns its state.
+// The creator automatically joins as the given player.
+func (s *Service) CreateGame(creator models.Player) *models.GameState {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	id := uuid.New().String()[:8]
 	game := models.NewGameState(id)
+
+	if creator == models.PlayerX {
+		game.PlayerXJoined = true
+	} else if creator == models.PlayerO {
+		game.PlayerOJoined = true
+	}
+
 	s.games[id] = game
 	return game
+}
+
+// JoinGame attempts to join a game as the given player.
+// Returns an error if the game is full or the slot is already taken.
+func (s *Service) JoinGame(gameID string, player models.Player) (*models.GameState, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	game, exists := s.games[gameID]
+	if !exists {
+		return nil, errors.New("game not found")
+	}
+
+	if player != models.PlayerX && player != models.PlayerO {
+		return nil, ErrInvalidPlayer
+	}
+
+	// Check if the requested slot is already taken
+	if player == models.PlayerX && game.PlayerXJoined {
+		return nil, ErrSlotTaken
+	}
+	if player == models.PlayerO && game.PlayerOJoined {
+		return nil, ErrSlotTaken
+	}
+
+	// Check if game already has 2 players
+	if game.PlayerXJoined && game.PlayerOJoined {
+		return nil, ErrGameFull
+	}
+
+	// Join
+	if player == models.PlayerX {
+		game.PlayerXJoined = true
+	} else {
+		game.PlayerOJoined = true
+	}
+
+	return game, nil
 }
 
 // GetGame retrieves a game by ID

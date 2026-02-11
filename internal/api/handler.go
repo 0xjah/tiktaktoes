@@ -56,7 +56,7 @@ func (h *Handler) handleCreateGame(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	game := h.gameService.CreateGame()
+	game := h.gameService.CreateGame(models.Empty)
 	h.respondJSON(w, game)
 }
 
@@ -210,7 +210,7 @@ func (h *Handler) htmxNewGame(w http.ResponseWriter, r *http.Request) {
 	}
 
 	player := getPlayerFromRequest(r)
-	game := h.gameService.CreateGame()
+	game := h.gameService.CreateGame(models.Player(player))
 	h.renderGameHTML(w, game, player)
 }
 
@@ -226,10 +226,11 @@ func (h *Handler) htmxGetGame(w http.ResponseWriter, r *http.Request) {
 
 	player := getPlayerFromRequest(r)
 
-	game, exists := h.gameService.GetGame(gameID)
-	if !exists {
+	// Try to join the game
+	game, err := h.gameService.JoinGame(gameID, models.Player(player))
+	if err != nil {
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(`<div class="status" id="status">&gt; error: game not found</div>`))
+		w.Write([]byte(fmt.Sprintf(`<div class="status" id="status">&gt; error: %s</div>`, template.HTMLEscapeString(err.Error()))))
 		return
 	}
 
