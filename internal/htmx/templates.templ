@@ -1,0 +1,93 @@
+package htmx
+
+import (
+	"fmt"
+	"tiktaktoes/internal/models"
+)
+
+templ GameWrapper(game *models.GameState, player string) {
+	<div
+		hx-ext="sse"
+		sse-connect={ fmt.Sprintf("/htmx/sse/%s?player=%s", game.ID, player) }
+		sse-swap="game-update"
+		hx-swap="innerHTML"
+		data-game-id={ game.ID }
+	>
+		<div id="game-content">
+			@GameContent(game, player)
+		</div>
+	</div>
+}
+
+templ GameContent(game *models.GameState, player string) {
+	<div class="status" id="status">
+		if game.IsOver {
+			if game.IsDraw {
+				&gt; result: draw
+			} else {
+				&gt; winner: { string(game.Winner) }
+			}
+		} else {
+			if string(game.CurrentTurn) == player {
+				&gt; your_turn
+			} else {
+				&gt; waiting: { string(game.CurrentTurn) }...
+			}
+		}
+	</div>
+	<div class="board" id="board">
+		for i, cell := range game.Board {
+			@gameCell(game, player, i, cell)
+		}
+	</div>
+	<button
+		class="btn"
+		hx-post={ fmt.Sprintf("/htmx/game/new?player=%s", player) }
+		hx-target="#game-container"
+		hx-swap="innerHTML"
+	>
+		[new]
+	</button>
+	<button
+		class="btn"
+		hx-post={ fmt.Sprintf("/htmx/reset/%s?player=%s", game.ID, player) }
+		hx-target="#game-container"
+		hx-swap="innerHTML"
+	>
+		[reset]
+	</button>
+	<div class="game-id" id="gameId">
+		session: { game.ID }
+	</div>
+	<div
+		class="share-link"
+		id="shareLink"
+		data-game-id={ game.ID }
+		onclick="copyShareLink(this.dataset.gameId)"
+	>
+		[click to copy link]
+	</div>
+}
+
+templ gameCell(game *models.GameState, player string, index int, cellValue models.Player) {
+	if cellValue == models.PlayerX {
+		<div class="cell x disabled">X</div>
+	} else if cellValue == models.PlayerO {
+		<div class="cell o disabled">O</div>
+	} else if game.IsOver {
+		<div class="cell disabled"></div>
+	} else {
+		<div
+			class="cell"
+			hx-post={ fmt.Sprintf("/htmx/move/%s/%d?player=%s", game.ID, index, player) }
+			hx-target="#game-container"
+			hx-swap="innerHTML"
+		></div>
+	}
+}
+
+templ ErrorStatus(message string) {
+	<div class="status" id="status">
+		&gt; error: { message }
+	</div>
+}

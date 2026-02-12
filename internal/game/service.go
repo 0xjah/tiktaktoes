@@ -139,10 +139,10 @@ func (s *Service) MakeMove(gameID string, move models.Move) (*models.GameState, 
 	game.Board[move.Position] = move.Player
 
 	// Check for winner
-	if winner := s.checkWinner(game.Board); winner != models.Empty {
+	if winner := checkWinner(game.Board); winner != models.Empty {
 		game.Winner = winner
 		game.IsOver = true
-	} else if s.isBoardFull(game.Board) {
+	} else if isBoardFull(game.Board) {
 		game.IsDraw = true
 		game.IsOver = true
 	} else {
@@ -173,7 +173,7 @@ func (s *Service) ResetGame(gameID string) (*models.GameState, error) {
 }
 
 // checkWinner checks if there's a winner
-func (s *Service) checkWinner(board models.Board) models.Player {
+func checkWinner(board models.Board) models.Player {
 	for _, condition := range winConditions {
 		a, b, c := condition[0], condition[1], condition[2]
 		if board[a] != models.Empty && board[a] == board[b] && board[b] == board[c] {
@@ -184,7 +184,7 @@ func (s *Service) checkWinner(board models.Board) models.Player {
 }
 
 // isBoardFull checks if the board is full
-func (s *Service) isBoardFull(board models.Board) bool {
+func isBoardFull(board models.Board) bool {
 	for _, cell := range board {
 		if cell == models.Empty {
 			return false
